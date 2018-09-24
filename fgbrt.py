@@ -6,6 +6,8 @@ import json
 # your import statements here
 import random
 import json
+#import math
+#import numpy as np
 
 first_line = True # DO NOT REMOVE
 
@@ -41,26 +43,21 @@ def closest_killable():
     resp = game.get_monster(0).respawn_counter
     if resp == 0: resp = 40
     healthSetMax = (resp)//(7-me.speed)
-    #game.log("healthset" + str(healthSetMax))
+    game.log("healthset" + str(healthSetMax))
     maxValue = min(healthSetMax, 4)
     checkingSet = set()
     for i in range(maxValue+1):
         checkingSet = checkingSet | set(HealthUrgencySet[i])
-    #game.log("len: " + str(len(list(checkingSet))))
+    game.log("len: " + str(len(list(checkingSet))))
     #for j in list(checkingSet):
-    #    #game.log("checkingset: " str(j))
-    #game.log(str(me.location))
-    #game.log(str(list(checkingSet)))
-    if me.location == 0 and (healthSetMax ==  1 or healthSetMax == 0):
-        #game.log("test")
-        return 0
+    #    game.log("checkingset: " str(j))
     adjacentNodes = game.get_adjacent_nodes(me.location)
     #game.log("hi")
     should_check_nodes = [i for i in adjacentNodes if i in checkingSet]
     #for i in should_check_nodes:
         #game.log("should check: " + str(i))
     next_destination = killable(should_check_nodes, 1, healthSetMax)
-    #game.log("next dest: " + str(next_destination))
+    game.log("next dest: " + str(next_destination))
     if next_destination not in game.get_adjacent_nodes(me.location):
         return game.shortest_paths(me.location, next_destination)[0][0]
     return next_destination
@@ -70,7 +67,8 @@ def killable(nodesToCheck, distance, healthSetMax, enemy=False):
     bestSpot = -1
     #game.log("i ran")
     for location in nodesToCheck:
-        
+        if location == 0 and healthSetMax - distance == 1:
+            return 0
         #game.log("location" + str(location))
         #game.log("killable loop: " + str(location))
         if len(game.shortest_paths(0, location)[0]) < (healthSetMax - distance):
@@ -89,20 +87,14 @@ def killable(nodesToCheck, distance, healthSetMax, enemy=False):
                         if temp_attack == 0: temp_attack = 1
                         total_dam = ((game.get_monster(location).health // stance_to_int(me,get_winning_stance(game.get_monster(location).stance))) +1 ) * temp_attack
                         score = 1.0 * reward / total_dam
-                        
                         #game.log("schore" + str(score))
-                        
                         if score > bestValue: 
-                            #game.log("trige")
+                            game.log("trige")
                             bestValue = score
                             bestSpot = location
-                            #game.log("score: "+str(score))
-                        if abs(score - bestValue) < 0.01 and get_worst_stat_list() == death_eff[1]:
-                            #game.log("trige")
-                            ##game.log(str(get_worst_stat_list()))
-                            #game.log("death" + str(death_eff[1]))
-                            #game.log("score: "+str(score))
-                            bestValue = score + 0.2
+                        if score == bestValue and get_worst_stat_list() == death_eff[1]:
+                            game.log("trige")
+                            bestValue = score
                             bestSpot = location
                 #else:
                 #    if game.get_monster(location).respawn_counter < distance * (7-me.speed):
@@ -111,9 +103,6 @@ def killable(nodesToCheck, distance, healthSetMax, enemy=False):
     if bestValue == -1:
         newNodesToCheck_temp = [game.get_adjacent_nodes(i) for i in nodesToCheck]
         newNodesToCheck = list(set(sum(newNodesToCheck_temp, [])))
-        if me.location == 0 and (healthSetMax ==  1 or healthSetMax == 0):
-            #game.log("test")
-            return 0
         healthSetMax -= 1
         maxValue = min(healthSetMax, 4)
         checkingSet = set()
@@ -121,9 +110,9 @@ def killable(nodesToCheck, distance, healthSetMax, enemy=False):
             checkingSet = checkingSet | set(HealthUrgencySet[i])
         should_check_nodes = [i for i in newNodesToCheck if i in checkingSet]
         if distance == 2: return should_check_nodes[0]
-        #for i in should_check_nodes: 
-            #game.log("should check" + str(i))
-        return killable(should_check_nodes, 2, healthSetMax)
+        for i in should_check_nodes: 
+            game.log("should check" + str(i))
+        next_destination = killable(should_check_nodes, 2, healthSetMax)
     return bestSpot
 
 def getStance(location):
@@ -225,11 +214,13 @@ for line in fileinput.input():
     else: 
         PREV_HEALTH = HEALTH
         HEALTH = me.health
+
     if FIRST_TURN:
         destination_node = 10
         chosen_stance = get_winning_stance(game.get_opponent().stance)
         if game.has_monster(destination_node):
             chosen_stance = "Rock"
+
 
 
 
@@ -242,47 +233,47 @@ for line in fileinput.input():
 
     else:
         if me.location == me.destination: # check if we have moved this turn or if its turn 1
-            destination_node = closest_killable()
-            chosen_stance = getStance(destination_node)
             # get all living monsters closest to me
-            #if game.has_monster(me.location) and game.get_monster(me.location).dead == False:
-            #    destination_node = me.location
-            #    chosen_stance = getStance(me.location)
-            #else:
-            '''    
-                monsters = game.get_all_monsters()
-                index = -1
-                mini = 1000
-                shortest = 10
-            
-                for ind,m in enumerate(monsters):
-                    if len(game.shortest_paths(me.location, m.location)[0]) <= shortest:
-                        shortest = len(game.shortest_paths(me.location, m.location)[0])
-                        if m.dead == True and m.respawn_counter > me.movement_counter - me.speed + shortest * (7 - me.speed):
-                            continue
-                        stance = get_winning_stance(m.stance)
-                        damage_dealt = m.attack * (m.health / 1.0 * stance_to_int(me, stance))
-                        if damage_dealt < mini:
-                            mini = damage_dealt
-                            index = ind
-                monster_to_move_to = monsters[index]
 
-                # get the set of shortest paths to that monster
-                paths = game.shortest_paths(me.location, monster_to_move_to.location)
-                destination_node = paths[random.randint(0, len(paths)-1)][0]
-                #if game.has_monster(destination_node) and me.movement_counter - me.speed == 1:
-                #    chosen_stance = getStance(destination_node)
-                #else: chosen_stance = get_winning_stance(game.get_opponent().stance)
-                chosen_stance = getStance(destination_node)
-            '''
+            if game.has_monster(me.location) and game.get_monster(me.location).dead == False:
+                destination_node = me.location
+                chosen_stance = getStance(me.location)
+            else:
+                if me.health < 60:
+                    destination_node = game.shortest_paths(me.location, 0)[0][0]
+                    chosen_stance = getStance(destination_node)
+                else:
+                    monsters = game.get_all_monsters()
+                    index = -1
+                    mini = 1000
+                    shortest = 10
+                    for ind,m in enumerate(monsters):
+                        if len(game.shortest_paths(me.location, m.location)[0]) <= shortest:
+                            shortest = len(game.shortest_paths(me.location, m.location)[0])
+                            if m.dead == True and m.respawn_counter > me.movement_counter - me.speed + shortest * (7 - me.speed):
+                                continue
+                            stance = get_winning_stance(m.stance)
+                            damage_dealt = m.attack * (m.health / (1.0 * stance_to_int(me, stance)))
+                            if damage_dealt < mini:
+                                mini = damage_dealt
+                                index = ind
+                    monster_to_move_to = monsters[index]
+
+                    # get the set of shortest paths to that monster
+                    paths = game.shortest_paths(me.location, monster_to_move_to.location)
+                    destination_node = paths[random.randint(0, len(paths)-1)][0]
+                    #if game.has_monster(destination_node) and me.movement_counter - me.speed == 1:
+                    #    chosen_stance = getStance(destination_node)
+                    #else: chosen_stance = get_winning_stance(game.get_opponent().stance)
+                    chosen_stance = getStance(destination_node)
+
         else:
             destination_node = me.destination
-            chosen_stance = getStance(me.location)
-            #chosen_stance = me.stance
-            #if PREV_HEALTH > HEALTH:
-            #    chosen_stance = getStance(destination_node)
+            chosen_stance = me.stance
+            if PREV_HEALTH > HEALTH:
+                chosen_stance = getStance(destination_node)
 
-        #if game.has_monster(me.location):
+        #f game.has_monster(me.location):
             # if there's a monster at my location, choose the stance that damages that monster
         #    chosen_stance = getStance(me.location)
 
@@ -290,6 +281,5 @@ for line in fileinput.input():
         #    chosen_stance = stances[random.randint(0, 2)]
         # submit your decision for the turn (This function should be called exactly once per turn)
     FIRST_TURN = 0
-    #game.log(str(destination_node))
     game.submit_decision(destination_node, chosen_stance)
 

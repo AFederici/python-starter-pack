@@ -250,15 +250,14 @@ class Game:
         while not done:
             n = to_explore.pop(0)
 
+            if min_dist != -1 and distances[n] > min_dist:
+                return ret
+
             if valid_monsters[n] is not None:
                 ret.append(valid_monsters[n])
 
                 if min_dist == -1:
                     min_dist = distances[n]
-
-            if min_dist != -1 and distances[n] > min_dist:
-                return ret
-
 
             for adj in self.nodes[n].adjacents:
                 if (distances[adj] == -1):
